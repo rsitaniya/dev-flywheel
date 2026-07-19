@@ -10,7 +10,10 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - `python scripts/flywheel_config.py --get SECTION.KEY` prints a single config value, so shell steps in the loop skills can read the active app module instead of hardcoding it.
-- Config layer unit tests (`tests/test_flywheel_config.py`): unknown-section survival, config-dir-relative path resolution, non-path-key safety, env-var and explicit-path selection, and the two-apps-distinct-log invariant.
+- `simulate.py --replay FILE` (and `[traffic].replay_file`) fires a fixed list of recorded request specs instead of synthesizing them, so a run is reproducible. Precedence: `--replay` flag > `[traffic].replay_file` > schema-random (unchanged default).
+- Every simulated request now carries an `X-Run-Id` header (`--run-id`, else a random `sim-*` id); the middleware records it as `run_id`, so one run's traffic can be isolated in the shared usage log without renaming it.
+- `[app].usage_log` config key; `app/main.py` reads its log path from the `USAGE_LOG_PATH` env var (default unchanged), which the loop's launcher exports from that key so server and analyzer agree on the file.
+- Config, replay, and run-id tests (`tests/test_flywheel_config.py`, `tests/test_simulate.py`, and two cases in `tests/test_usage_logging.py`).
 
 ## [0.5.0] - 2026-06-16
 
