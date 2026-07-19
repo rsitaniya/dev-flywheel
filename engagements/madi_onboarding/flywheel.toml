@@ -1,0 +1,24 @@
+# Engagement config: points the generic loop at the partner-onboarding app.
+# Selected by exporting FLYWHEEL_CONFIG=engagements/madi_onboarding/flywheel.toml.
+# Path-valued keys resolve against THIS file's directory (see scripts/flywheel_config.py).
+
+[app]
+module = "engagements.madi_onboarding.app.main:app"
+base_url = "http://localhost:8000"
+usage_log = "usage_log.jsonl"                      # → engagements/madi_onboarding/usage_log.jsonl
+version_files = ["engagements/madi_onboarding/app/main.py"]
+
+[simulator]
+# No schema-random edge-case overlay: this engagement is replay-driven.
+edge_cases = ""
+default_requests = 30
+
+[traffic]
+# The new source's records, replayed as POST /ingest calls (build with to_replay.py).
+replay_file = "replay_forbes.jsonl"                # → engagements/madi_onboarding/replay_forbes.jsonl
+
+[signals]
+# Generic input-distribution profiling is not used here; the domain signal comes
+# from engagements/madi_onboarding/analyze_integration.py.
+numeric_params = []
+zero_value_params = []
