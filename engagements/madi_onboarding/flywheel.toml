@@ -7,6 +7,13 @@ module = "engagements.madi_onboarding.app.main:app"
 base_url = "http://localhost:8000"
 usage_log = "usage_log.jsonl"                      # → engagements/madi_onboarding/usage_log.jsonl
 version_files = ["engagements/madi_onboarding/app/main.py"]
+# The held-out oracle the dev-loop runs at Gate 2 to score a proposed adapter.
+evaluator = "python engagements/madi_onboarding/evaluate.py"
+
+[protected]
+# The implementer patch may never touch these — the evaluator, the gold labels,
+# the fixtures, or the source data. Editing what measures you is not a fix.
+paths = ["**/evaluate.py", "**/fixtures/**", "**/gold_*.json", "**/*_gold.json"]
 
 [simulator]
 # No schema-random edge-case overlay: this engagement is replay-driven.
