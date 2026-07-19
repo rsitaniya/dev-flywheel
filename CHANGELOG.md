@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- **The loop can now drive more than one app.** `flywheel_config.py` selects its config via (in order) an explicit path, the `FLYWHEEL_CONFIG` environment variable, then the repo-root `flywheel.toml`. Sections absent from the built-in defaults (e.g. `[traffic]`) are preserved instead of being silently dropped, and path-valued keys (`app.usage_log`, `simulator.edge_cases`, `traffic.replay_file`) resolve against the config file's own directory so an engagement config refers to its own files. Non-path keys (`module`, `base_url`) are left untouched.
+- `analyze_usage.py`: use `int | float` in `isinstance` (ruff UP038) — clears a lint failure that was breaking CI.
+
+### Added
+- `python scripts/flywheel_config.py --get SECTION.KEY` prints a single config value, so shell steps in the loop skills can read the active app module instead of hardcoding it.
+- Config layer unit tests (`tests/test_flywheel_config.py`): unknown-section survival, config-dir-relative path resolution, non-path-key safety, env-var and explicit-path selection, and the two-apps-distinct-log invariant.
+
 ## [0.5.0] - 2026-06-16
 
 ### Added
