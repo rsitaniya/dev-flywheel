@@ -2,9 +2,13 @@
 
 This scores an adapter set against gold labels the loop is NOT allowed to see or
 edit: gold field correspondences (schema-matching F1) and gold normalized records
-(value accuracy, fully-correct rate). It reads the source files, applies the
-current adapters, and compares to gold — it never reads the telemetry log, so its
-verdict is independent of anything the loop wrote.
+(value recall, fully-correct rate). It reads the source files, applies the current
+adapters, and compares to gold — it never reads the telemetry log, and the
+orchestrator forbids the implementer from editing this file, the mapping engine it
+runs (`adapters.py`), the fixtures, or the gold. So its verdict is independent of
+the telemetry and of the gold labels; the loop can still add adapter data and new
+normalizers, but neither can inflate the score (gold is unreachable and a wrong
+normalizer only lowers it).
 
 The implementer subagent is forbidden to modify this file, the fixtures, or the
 gold (enforced by the orchestrator's protected-path allowlist). That is what
@@ -12,7 +16,8 @@ stops the loop from "improving" by weakening its own test.
 
 Metrics (none satisfiable by returning HTTP 200):
   - schema_f1          : F1 of predicted vs gold field correspondences
-  - value_accuracy     : share of produced target values equal to gold
+  - value_accuracy     : recall of gold values — share of gold attribute values
+                         the adapters reproduce exactly (denominator is gold)
   - integrated_rate    : share of records with all required attributes produced
   - fully_correct_rate : share of records whose every gold attribute matches
 
@@ -79,6 +84,7 @@ def evaluate_source(source: str, fixtures_dir: Path, adapters_dir: Path) -> dict
         "source": source,
         "records": n,
         "schema_f1": round(schema_f1, 4),
+        # Recall of gold values: correct ÷ number of gold attribute values.
         "value_accuracy": round(correct_values / total_values, 4) if total_values else 0.0,
         "integrated_rate": round(integrated / n, 4) if n else 0.0,
         "fully_correct_rate": round(fully_correct / n, 4) if n else 0.0,

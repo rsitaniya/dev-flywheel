@@ -42,7 +42,7 @@ real, licensed MaDI data (see [DATA_LICENSE_NOTICE.md](DATA_LICENSE_NOTICE.md)).
 | `forbes` metric        | Baseline | Cycle 1 | Cycle 2 |
 |------------------------|---------:|--------:|--------:|
 | schema-mapping F1      |     0.00 |    0.55 |    1.00 |
-| value accuracy         |     0.00 |       — |    1.00 |
+| value recall (vs gold) |     0.00 |       — |    1.00 |
 | integrated rate        |       0% |    100% |    100% |
 | fully-correct rate     |       0% |      0% |    100% |
 | `dbpedia` regression   |        — |    none |    none |
@@ -54,7 +54,7 @@ real, licensed MaDI data (see [DATA_LICENSE_NOTICE.md](DATA_LICENSE_NOTICE.md)).
   attribute matches.
 - **Cycle 2** mapped the rest, including the two that need real judgment: the
   semantic rename `sales → revenue`, and currency/ISO normalization. Schema F1
-  and value accuracy reached 1.00.
+  and value recall (share of gold values reproduced) reached 1.00.
 - **No regression:** `dbpedia` stayed at 1.00 throughout. The onboarding didn't
   break the source already in production.
 
@@ -62,12 +62,16 @@ real, licensed MaDI data (see [DATA_LICENSE_NOTICE.md](DATA_LICENSE_NOTICE.md)).
 
 The evaluator reads the source records, the current adapters, and the **gold
 labels** — never the telemetry the app wrote — so its verdict is independent of
-anything the loop produced. Returning HTTP 200 for everything would not move
-schema F1 or value accuracy one point. And the loop physically cannot edit the
-scorer: a patch touching `evaluate.py`, `fixtures/`, or gold is rejected before
-apply (verified — the checker exits 2 on such a diff). A plausible-but-wrong
-mapping is caught too: pointing `sales → assets` instead of `revenue` drops both
-schema F1 and fully-correct rate.
+the telemetry and of the gold. Returning HTTP 200 for everything would not move
+schema F1 or value recall one point. The orchestrator forbids the implementer
+from editing the scorer, the mapping engine it runs, the fixtures, or the gold:
+a patch that **modifies, renames, or deletes** `evaluate.py`, `adapters.py`,
+`fixtures/`, or gold is rejected before apply (verified — the checker exits 2 on
+modify, rename, and delete diffs). What the loop *can* write — adapter mappings
+and new normalizers — can't inflate the score either: gold is unreachable, and a
+wrong normalizer only lowers value recall. A plausible-but-wrong mapping is
+caught too: pointing `sales → assets` instead of `revenue` drops both schema F1
+and fully-correct rate.
 
 ## Honest limits
 

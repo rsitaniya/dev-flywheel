@@ -21,16 +21,46 @@ from pathlib import Path
 from flywheel_config import get_value
 
 
+def _strip_prefix(p: str) -> str:
+    p = p.strip()
+    if p.startswith(("a/", "b/")):
+        p = p[2:]
+    return p
+
+
 def changed_paths(diff_text: str) -> list[str]:
-    """Extract target file paths from a unified diff (the `+++ b/...` lines)."""
-    paths = []
+    """Every path a diff references, on BOTH sides.
+
+    Covers plain edits (`+++ b/…`), additions/deletions (`--- a/…`, ignoring
+    `/dev/null`), and — critically — renames, which carry no `+++`/`---` lines at
+    all. A patch that renames or deletes a protected file must be caught too, so
+    we union the old and new paths from the `diff --git` header and the
+    `rename from`/`rename to` lines. Missing any of these is a bypass.
+    """
+    paths: set[str] = set()
     for line in diff_text.splitlines():
-        if line.startswith("+++ ") and not line.startswith("+++ /dev/null"):
-            p = line[4:].strip()
-            if p.startswith("b/"):
-                p = p[2:]
-            paths.append(p)
-    return paths
+        if line.startswith("diff --git "):
+            rest = line[len("diff --git "):]
+            if " b/" in rest:
+                a_part, b_part = rest.split(" b/", 1)
+                paths.add(_strip_prefix(a_part))
+                paths.add(_strip_prefix("b/" + b_part))
+        elif line.startswith(("--- ", "+++ ")):
+            body = line[4:].strip()
+            if body != "/dev/null":
+                paths.add(_strip_prefix(body))
+        elif line.startswith(("rename from ", "rename to ", "copy from ", "copy to ")):
+            paths.add(_strip_prefix(line.split(" ", 2)[2]))
+    return sorted(paths)
+
+
+def _matches(path: str, glob: str) -> bool:
+    # Match the full path, the path with a leading "**/" stripped (so a
+    # repo-root file matches too), and the basename — so `**/evaluate.py`
+    # catches evaluate.py wherever it sits and however the diff is prefixed.
+    bare = glob[3:] if glob.startswith("**/") else glob
+    name = path.rsplit("/", 1)[-1]
+    return fnmatch.fnmatch(path, glob) or fnmatch.fnmatch(path, bare) or fnmatch.fnmatch(name, bare)
 
 
 def protected_hits(paths: list[str], globs: list[str]) -> list[tuple[str, str]]:
@@ -38,7 +68,7 @@ def protected_hits(paths: list[str], globs: list[str]) -> list[tuple[str, str]]:
     hits = []
     for path in paths:
         for glob in globs:
-            if fnmatch.fnmatch(path, glob):
+            if _matches(path, glob):
                 hits.append((path, glob))
                 break
     return hits
